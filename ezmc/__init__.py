@@ -1,4 +1,5 @@
-from base import *
-from samplers import *
-from viz import *
-import utils
+from .base import *
+from .metropolis import *
+from .demc import *
+from .viz import *
+from . import utils

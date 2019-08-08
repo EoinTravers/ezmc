@@ -19,3 +19,40 @@
     #         plt.title(self.par_names[i])
     #         x = parameter_chain[:ix:thin, i]
     #         plt.plot(x)
+
+
+# import numba as nb
+# @nb.njit
+# def np_apply_along_axis(func1d, axis, arr):
+#     assert arr.ndim == 2
+#     assert axis in [0, 1]
+#     if axis == 0:
+#         result = np.empty(arr.shape[1])
+#         for i in range(len(result)):
+#             result[i] = func1d(arr[:, i])
+#     else:
+#         result = np.empty(arr.shape[0])
+#         for i in range(len(result)):
+#             result[i] = func1d(arr[i, :])
+#     return result
+
+# @nb.njit
+# def np_mean(array, axis):
+#     return np_apply_along_axis(np.mean, axis, array)
+
+# @nb.njit
+# def np_std(array, axis):
+#     return np_apply_along_axis(np.std, axis, array)
+
+from sys import stdout
+from time import sleep
+def foo(i):
+    txt = ('%i' % i) * (50-i)
+    # txt = '\r' + txt
+    txt = txt + ' ' * 80 + '\r'
+    stdout.write(txt)
+    stdout.flush()
+    sleep(.1)
+
+for i in range(50):
+    foo(i)

@@ -1,10 +1,11 @@
 
+import numpy as np
+
 def expand_1d_chain(chain, by):
     i = len(chain)
     new_chain = np.zeros(i + by)
     new_chain[:i] = chain
     return new_chain
-
 
 def uniform_within_bounds(bounds):
     bounds = np.array(bounds)
