@@ -47,10 +47,12 @@ class MetropolisSampler(BaseSampler):
     '''
     def __init__(self, func, par_names,
                  proposal_sd, init_func,
-                 noisy=True,
+                 n_chains=4, noisy=True,
                  visualise_func=None,
                  verbose=1):
-        super().__init__(func=func, par_names=par_names, noisy=noisy,
+        super().__init__(func=func, par_names=par_names,
+                         noisy=noisy,
+                         n_chains=n_chains,
                          visualise_func=visualise_func, verbose=verbose)
         self.proposal_sd = proposal_sd
         self.init_func = init_func

@@ -199,16 +199,19 @@ class BaseSampler(object):
             try:
                  self.sample_once(chain_ix)
                  if self.verbose > 0:
-                     txt = '\r#%i, #jumps = %i, Pars = %s, ll = %.2f' % (
-                         chain.iterations, chain.jumps,
-                         ','.join(['%.4f' % v for v in chain.values]),
-                         chain.cur_ll)
-                     stdout.write(txt)
-                     stdout.flush()
+                     if self.verbose > 1 or chain.iterations % 20 == 0:
+                         txt = '\r#%i, #jumps = %i, Pars = %s, ll = %.2f' % (
+                             chain.iterations, chain.jumps,
+                             ','.join(['%.4f' % v for v in chain.values]),
+                             chain.cur_ll)
+                         stdout.write(txt)
+                         stdout.flush()
             except Exception as ex:
-                print('\nThe following exception occured:')
-                print(ex)
-                print('Retrying this sample...')
+                raise(ex)
+                # print('\nThe following exception occured:')
+                # raise ex
+                # print(ex)
+                # print('Retrying this sample...')
 
     def sample_chains(self, n=5000, verbose=None, tidy=True):
         ''''Draw samples for all chains.
@@ -258,3 +261,16 @@ class BaseSampler(object):
     def get_chains(self):
         '''Get all samples on all chains, without burn-in or thinning.'''
         return self.get_results(burn_in=0, thin=1)
+
+    def to_arviz(self, burn_in=0, thin=0):
+        import arviz as az
+        samples = self.get_results(burn_in=burn_in, thin=thin)
+        nchains = len(set(samples['chain']))
+        nsteps = len(set(samples['iter']))
+        npars = len(self.par_names)
+        par_dict = {}
+        for k in self.par_names:
+            X = samples.pivot_table(values=k, columns='iter', index='chain').values
+            par_dict[k] = X
+        posterior = az.dict_to_dataset(par_dict)
+        return posterior
