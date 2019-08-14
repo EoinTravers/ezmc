@@ -44,15 +44,15 @@
 # def np_std(array, axis):
 #     return np_apply_along_axis(np.std, axis, array)
 
-from sys import stdout
-from time import sleep
-def foo(i):
-    txt = ('%i' % i) * (50-i)
-    # txt = '\r' + txt
-    txt = txt + ' ' * 80 + '\r'
-    stdout.write(txt)
-    stdout.flush()
-    sleep(.1)
+# from sys import stdout
+# from time import sleep
+# def foo(i):
+#     txt = ('%i' % i) * (50-i)
+#     # txt = '\r' + txt
+#     txt = txt + ' ' * 80 + '\r'
+#     stdout.write(txt)
+#     stdout.flush()
+#     sleep(.1)
 
-for i in range(50):
-    foo(i)
+# for i in range(50):
+#     foo(i)
