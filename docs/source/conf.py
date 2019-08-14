@@ -21,14 +21,18 @@ author = 'Eoin Travers'
 version = '0.0.1'
 
 
-# -- General configuration ---------------------------------------------------
+# -- General configuration -
+# These might not all still be needed.
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'nbsphinx',
     'sphinx.ext.mathjax',
+    'm2r',
     'sphinx.ext.viewcode'
 ]
 
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

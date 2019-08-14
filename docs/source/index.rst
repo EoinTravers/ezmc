@@ -1,8 +1,15 @@
 
-EZMC: Easy Peasy MCMC
-=====================
+.. Get introductory stuff from github README
+.. mdinclude:: ../../README.md
 
-**EZMC** is blah blah
+
+Documentation
+=============
+.. toctree::
+   :maxdepth: 2
+
+   BasicUse
+
 
 
 API
@@ -11,7 +18,6 @@ API
    :maxdepth: 2
 
    api.rst
-
 
 Indices and tables
 ==================
