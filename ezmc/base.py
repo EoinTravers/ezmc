@@ -1,3 +1,7 @@
+'''
+Base MCMC chain and sampler classes.
+Specific samplers (e.g. Metropolis) extend these classes.
+'''
 
 import numpy as np
 import pandas as pd
@@ -70,12 +74,14 @@ class BaseChain(object):
             self._expand()
 
     def _expand(self, expand_by=int(1e+6)):
+        '''Make room for more samples'''
         new_chain = np.zeros(self.interations + expand_by, self.n_pars)
         new_chain[:self.iterations] = self.chain
         self.chain = new_chain
         self.ll = utils.expand_1d_chain(self.ll, expand_by)
 
     def _update_results(self, burn_in=100, thin=4):
+        '''Transform samples into a dataframe, and attaches it to the chain'''
         ix = self.iterations
         samples = pd.DataFrame(self.chain, columns=self.par_names)
         samples['ll'] = self.ll
@@ -213,21 +219,29 @@ class BaseSampler(object):
                 # print(ex)
                 # print('Retrying this sample...')
 
-    def sample_chains(self, n=5000, verbose=None, tidy=True):
+    def sample_chains(self, n=5000,
+                      save_every=None, filepath='.ezmc_samples_ch%i.csv',
+                      verbose=None, tidy=True):
         ''''Draw samples for all chains.
 
         Parameters
         ----------
-        chain_ix : int
-            Index of the chain to sample.
         n : int
-            Number of samples to draw.
+            Iterations to run.
+        save_every: [Not implemented!] int or None
+            If not None (Default), save intermediate samples to file every
+            n iterations.
+        filepath: [Not implemented!] str
+            CSV filepath to save samples to.
         verbose : int or None
-            Print verbose output?
-        tidy : Bool
-            Concatenate all chains to length of shortest chain before sampling?
-            Defaults to `True`. This is a good idea if you interrupt and resume sampling.
+            If None (Default), use sampler settings.
+        tidy: bool
+            If True (Default), trunctuate chains to length of shortest chain
+            before sampling.
         '''
+        if save_every is not None:
+            raise NotImplementedError(
+                'Saving samples is not implemented yet for this class.')
         if tidy:
             self._tidy_chains()
         for i in range(len(self.chains)):
@@ -245,6 +259,7 @@ class BaseSampler(object):
             self.chains[i].iterations = n
 
     def _update_results(self, burn_in=100, thin=4):
+        '''Transform samples into a dataframe, and attaches it to the sampler'''
         res = []
         for i, chain in enumerate(self.chains):
             chain._update_results(burn_in=burn_in, thin=thin)
@@ -254,7 +269,16 @@ class BaseSampler(object):
         self.results = pd.concat(res)
 
     def get_results(self, burn_in=100, thin=4):
-        '''Get posterior samples, after discarding burn-in samples and thinning.'''
+        '''Get posterior samples, after discarding burn-in samples and thinning.
+
+        Parameters
+        ---------
+        burn_in: int
+            How many iterations to drop at start of chains. Default 100.
+        thin: int
+            Proportion of iterations should be drop from chains.
+            Set to 1 for no thinning. Default 4.
+        '''
         self._update_results(burn_in=burn_in, thin=thin)
         return self.results
 
@@ -262,7 +286,18 @@ class BaseSampler(object):
         '''Get all samples on all chains, without burn-in or thinning.'''
         return self.get_results(burn_in=0, thin=1)
 
+    def to_csv(self, filename, burn_in=0, thin=1):
+        '''Gets samples a dataframe (without thinning), and saves them to file.
+
+        Equivalent to `sampler.get_results(burn_in=0, thin=1).to_csv(filename)`
+        '''
+        self._update_results(burn_in=burn_in, thin=thin)
+        self.results.to_csv(filepath)
+
+
+
     def to_arviz(self, burn_in=0, thin=0):
+        '''Exports posterior samples as Arviz object for visualisation.'''
         import arviz as az
         samples = self.get_results(burn_in=burn_in, thin=thin)
         nchains = len(set(samples['chain']))

@@ -1,3 +1,6 @@
+'''
+The Metropolis sampler.
+'''
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -10,6 +13,8 @@ from .base import BaseSampler, BaseChain
 class MetropolisSampler(BaseSampler):
     '''The Metropolis MCMC sampler.
 
+    Unless otherwise specified, properties and methods are inherited from BaseSampler.
+
     Parameters
     ----------
     func : function
@@ -19,12 +24,15 @@ class MetropolisSampler(BaseSampler):
     proposal_sd : float or np.array of floats
          Standard deviation of the proposal distribution for each parameter.
          If only one value is given, uses the same SD for every parameter.
+    n_chains : int
+         Number of chains to run. Default: 4.
     noisy : Bool
         Is the density function stochastic? If `True` (default), re-evaluate it every iteration.
     visalise_func :
          A function for visualising parameter values. Not implemented yet.
     verbose :
          If > 0, print information while sampling.
+         Higher numbers, more information.
 
     Attributes
     ----------

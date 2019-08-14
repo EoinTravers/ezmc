@@ -1,3 +1,16 @@
+'''
+Differential Evolution Monte Carlo Sampler.
+
+See
+
+- Ter Braak, C. J. (2006). A Markov Chain Monte Carlo version of the
+  genetic algorithm Differential Evolution: easy Bayesian computing
+  for real parameter spaces. Statistics and Computing, 16(3), 239-249.
+- Turner, B. M., Sederberg, P. B., Brown, S. D., & Steyvers, M.
+  (2013). A method for efficiently sampling from distributions with
+  correlated dimensions. Psychological methods, 18(3), 368.
+'''
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,6 +21,7 @@ from . import utils
 from .base import BaseSampler, BaseChain
 
 class DEMCChain(BaseChain):
+    '''DEMC Chains differ from base chains only in that they record migration steps.'''
     def __init__(self, n_pars, par_names=None, initial_length=int(1e+6)):
         super().__init__(n_pars=n_pars, par_names=par_names, initial_length=initial_length)
         self.is_migration = np.zeros(initial_length)
@@ -21,7 +35,33 @@ class DEMCChain(BaseChain):
         self.results = samples.iloc[burn_in:ix:thin]
 
 class DifferentialEvolutionSampler(BaseSampler):
-    '''A Differential Evolution Markov Chain Sampler'''
+    '''A Differential Evolution Markov Chain Sampler.
+
+    Unless otherwise specified, properties and methods are inherited from BaseSampler.
+
+    Parameters
+    ----------
+    func : function
+         The log-density function for the distribution you're sampling from.
+    par_names : list of str
+         List of parameter names.
+    init_bounds : list of lists (n parameters x 2)
+         Chains begin with random parameters between these intervals.
+         E.g. [[alpha_low, alpha_high], [beta_low, beta_high]] for sampler
+         with parameters alpha and beta.
+    n_chains : int
+         Number of chains to run. Default: 20.
+    noisy : Bool
+        Is the density function stochastic? If `True` (default), re-evaluate it every iteration.
+    visalise_func :
+         A function for visualising parameter values. Not implemented yet.
+    verbose :
+         If > 0, print information while sampling.
+         Higher numbers, more information.
+
+    Attributes
+    ----------
+    '''
     def __init__(self, func, par_names, init_bounds,
                  n_chains=20,
                  noisy=True,
@@ -32,17 +72,22 @@ class DifferentialEvolutionSampler(BaseSampler):
                          visualise_func=visualise_func, verbose=verbose)
         self.init_bounds = init_bounds
 
-    def add_chains(self, n_chains):
+    def _add_chains(self, n_chains):
+        '''Use DEMCChains instead of Base.'''
         self.chains = []
         for i in range(n_chains):
             self.chains.append(DEMCChain(self.n_pars, par_names=self.par_names))
 
     def propose(self, chain_ix, gamma='terBrack', noise=.001):
-        '''
-        gamma: Tuning paramater controlling how far to jump from current value.
-          'terBrack': Default. 2.38 * sqrt(2*n_pars).
-          'random': np.random.uniform(.5, 1)
-           float: Other hard-coded value.
+        '''Differential Evolution proposal distribution
+
+        Parameters
+        ----------
+        gamma: float or str
+            Tuning paramater controlling how far to jump from current value.
+            - 'terBrack': Default. 2.38 * sqrt(2*n_pars).
+            - 'random': np.random.uniform(.5, 1)
+            - float: Other hard-coded value.
         noise: Uniform noise added to proposal
         '''
         chain = self.chains[chain_ix]
@@ -63,9 +108,10 @@ class DifferentialEvolutionSampler(BaseSampler):
         ## Innovate current chain using difference between the other two.
         return old + innovation
 
-
     def eval_proposal(self, proposal, chain):
-        '''Same as Metropolis?'''
+        '''Same evaluation rule as Metropolis.'''
+        ## TODO: create metropolis_eval function in demc.utils,
+        ## and use it both here and in Metropolis.
         new_ll = self.func(proposal)
         if chain.iterations == 0:
             return np.nan, new_ll, True
@@ -103,6 +149,26 @@ class DifferentialEvolutionSampler(BaseSampler):
                       migrate_every=None,
                       save_every=None, filepath='.ezmc_samples.csv',
                       verbose=None, tidy=True):
+        '''Run all chains of the DEMC Sampler.
+
+        Parameters
+        ----------
+        n : int
+            Iterations to run.
+        migrate_every : int or None
+            If not None (Default), performa migration step every n iterations.
+        save_every: int or None
+            If not None (Default), save intermediate samples to file every
+            n iterations.
+        filepath: str
+            CSV filepath to save samples to.
+        verbose : int or None
+            If None (Default), use sampler settings.
+        tidy: bool
+            If True (Default), trunctuate chains to length of shortest chain
+            before sampling.
+
+        '''
         if tidy:
             self._tidy_chains()
         if verbose is not None:
