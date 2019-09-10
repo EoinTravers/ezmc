@@ -207,7 +207,7 @@ class BaseSampler(object):
             try:
                  self.sample_once(chain_ix)
                  if self.verbose > 0:
-                     if self.verbose > 1 or chain.iterations % 20 == 0:
+                     if self.verbose == 2 or chain.iterations % 20 == 0:
                          txt = '\r#%i, #jumps = %i, Pars = %s, ll = %.2f' % (
                              chain.iterations, chain.jumps,
                              ','.join(['%.4f' % v for v in chain.values]),
@@ -224,7 +224,7 @@ class BaseSampler(object):
 
     def sample_chains(self, n=5000, parallel=False,
                       save_every=None, filepath='.ezmc_samples_ch%i.csv',
-                      verbose=None, tidy=True):
+                      verbose=None, tidy=True, print_every=100):
         ''''Draw samples for all chains.
 
         Parameters
@@ -262,7 +262,7 @@ class BaseSampler(object):
             self.verbose = 0
             import scipy
             pool = mp.Pool(self.n_chains)
-            result = [pool.apply_async(utils._parallel_sample, args=(self, i, n))
+            result = [pool.apply_async(utils._parallel_sample, args=(self, i, n, print_every))
                       for i in range(self.n_chains)]
             self.chains = [r.get() for r in result]
             self.verbose = old_verbose

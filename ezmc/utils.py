@@ -54,10 +54,42 @@ def summarise(results, params=None, alpha=.05):
     out = pd.concat([summary, intervals]).reindex(['Estimate', 'SE', 'CI_low', 'CI_high', 'P(b > 0)']).T
     return out
 
-def _parallel_sample(sampler, chain_ix, n):
+def _parallel_sample(sampler, chain_ix, n, print_every=100):
     '''Top-level wrapper function used when sampling in parallel.'''
     print('\nStarting chain %i' % (chain_ix+1))
     scipy.random.seed()
-    res = sampler.sample_chain(chain_ix, n)
+    res = _parallel_sample_chain(sampler, chain_ix, n, print_every=print_every)
+    # res = sampler.sample_chain(chain_ix, n)
     print('\nFinished chain %i' % (chain_ix+1))
     return res
+
+
+
+def _parallel_sample_chain(sampler, chain_ix, n, print_every):
+    ''''Proper progress monitoring for parallel chains.
+    To be integrated into BaseSampler.sample_chain.
+    Draw samples on a single chain.
+
+    Parameters
+    ----------
+    chain_ix : int
+        Index of the chain to sample.
+    n : int
+        Number of samples to draw.
+    verbose : Ignored
+    print_every: int
+    '''
+    chain = sampler.chains[chain_ix]
+    target_iter = chain.iterations + n
+    while(chain.iterations < target_iter):
+        try:
+             sampler.sample_once(chain_ix)
+             if chain.iterations % print_every == 0:
+                 txt = 'Chain %i - #%i, #jumps = %i, Pars = %s, ll = %.2f' % (
+                     (chain_ix+1), chain.iterations, chain.jumps,
+                     ','.join(['%.4f' % v for v in chain.values]),
+                     chain.cur_ll)
+                 print(txt)
+        except Exception as ex:
+            raise(ex)
+    return chain
