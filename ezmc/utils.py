@@ -1,6 +1,7 @@
 
 import numpy as np
 import pandas as pd
+import scipy
 
 def expand_1d_chain(chain, by):
     '''If a chain runs out of room, make it bigger.'''
@@ -52,3 +53,11 @@ def summarise(results, params=None, alpha=.05):
     summary = pd.DataFrame([est, se, p_pos], index=['Estimate', 'SE', 'P(b > 0)'])
     out = pd.concat([summary, intervals]).reindex(['Estimate', 'SE', 'CI_low', 'CI_high', 'P(b > 0)']).T
     return out
+
+def _parallel_sample(sampler, chain_ix, n):
+    '''Top-level wrapper function used when sampling in parallel.'''
+    print('\nStarting chain %i' % (chain_ix+1))
+    scipy.random.seed()
+    res = sampler.sample_chain(chain_ix, n)
+    print('\nFinished chain %i' % (chain_ix+1))
+    return res

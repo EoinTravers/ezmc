@@ -8,6 +8,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 from sys import stdout
+import multiprocessing as mp
+
 from . import utils
 
 class BaseChain(object):
@@ -218,8 +220,9 @@ class BaseSampler(object):
                 # raise ex
                 # print(ex)
                 # print('Retrying this sample...')
+        return chain
 
-    def sample_chains(self, n=5000,
+    def sample_chains(self, n=5000, parallel=False,
                       save_every=None, filepath='.ezmc_samples_ch%i.csv',
                       verbose=None, tidy=True):
         ''''Draw samples for all chains.
@@ -228,6 +231,8 @@ class BaseSampler(object):
         ----------
         n : int
             Iterations to run.
+        parallel : bool
+            Run chains in parallel? For now, uses as many cores as there are chains.
         save_every: [Not implemented!] int or None
             If not None (Default), save intermediate samples to file every
             n iterations.
@@ -244,9 +249,23 @@ class BaseSampler(object):
                 'Saving samples is not implemented yet for this class.')
         if tidy:
             self._tidy_chains()
-        for i in range(len(self.chains)):
-            print('\nStarting chain %i' % (i+1))
-            self.sample_chain(i, n, verbose=verbose)
+        if not parallel:
+            for i in range(len(self.chains)):
+                print('\nStarting chain %i' % (i+1))
+                self.sample_chain(i, n, verbose=verbose)
+        else:
+            print('Sampling in parallel')
+            print('Note: Progress monitoring not implemented for parallel chains yet.')
+            print('Setting verbose=0')
+            ## Note - Progress is lost when you interrupt parallel sampling!
+            old_verbose = self.verbose
+            self.verbose = 0
+            import scipy
+            pool = mp.Pool(self.n_chains)
+            result = [pool.apply_async(utils._parallel_sample, args=(self, i, n))
+                      for i in range(self.n_chains)]
+            self.chains = [r.get() for r in result]
+            self.verbose = old_verbose
 
     def _tidy_chains(self):
         '''
