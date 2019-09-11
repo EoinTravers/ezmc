@@ -54,20 +54,23 @@ def summarise(results, params=None, alpha=.05):
     out = pd.concat([summary, intervals]).reindex(['Estimate', 'SE', 'CI_low', 'CI_high', 'P(b > 0)']).T
     return out
 
-def _parallel_sample(sampler, chain_ix, n, print_every=100):
+def _parallel_sample(sampler, chain_ix, n, print_every=100, **kwargs):
     '''Top-level wrapper function used when sampling in parallel.'''
     print('\nStarting chain %i' % (chain_ix+1))
     scipy.random.seed()
-    res = _parallel_sample_chain(sampler, chain_ix, n, print_every=print_every)
+    res = _parallel_sample_chain(sampler, chain_ix, n,
+                                 print_every=print_every,
+                                 **kwargs)
     # res = sampler.sample_chain(chain_ix, n)
     print('\nFinished chain %i' % (chain_ix+1))
     return res
 
 
 
-def _parallel_sample_chain(sampler, chain_ix, n, print_every):
+def _parallel_sample_chain(sampler, chain_ix, n, print_every, *args, **kwargs):
     ''''Proper progress monitoring for parallel chains.
     To be integrated into BaseSampler.sample_chain.
+
     Draw samples on a single chain.
 
     Parameters
@@ -83,7 +86,7 @@ def _parallel_sample_chain(sampler, chain_ix, n, print_every):
     target_iter = chain.iterations + n
     while(chain.iterations < target_iter):
         try:
-             sampler.sample_once(chain_ix)
+             sampler.sample_once(chain_ix, *args, **kwargs)
              if chain.iterations % print_every == 0:
                  txt = 'Chain %i - #%i, #jumps = %i, Pars = %s, ll = %.2f' % (
                      (chain_ix+1), chain.iterations, chain.jumps,
@@ -93,3 +96,18 @@ def _parallel_sample_chain(sampler, chain_ix, n, print_every):
         except Exception as ex:
             raise(ex)
     return chain
+
+
+
+def results_to_arviz(results):
+    '''Exports posterior samples as Arviz object for visualisation.'''
+    import arviz as az
+    nchains = len(set(results['chain']))
+    nsteps = len(set(results['iter']))
+    npars = len(sampler.par_names)
+    par_dict = {}
+    for k in sampler.par_names:
+        X = results.pivot_table(values=k, columns='iter', index='chain').values
+        par_dict[k] = X
+    posterior = az.dict_to_dataset(par_dict)
+    return posterior

@@ -162,7 +162,7 @@ class BaseSampler(object):
         '''This method is overwitten for specific samplers'''
         print('Overwrite this method for specific samplers.')
 
-    def eval_proposal(self, proposal, chain, noisy):
+    def eval_proposal(self, proposal, chain, noisy, *args, **kwargs):
         '''This method is overwitten for specific samplers'''
         print('Overwrite this method for specific samplers. Should return old_ll, new_ll (both float), accept (bool)')
 
@@ -171,23 +171,24 @@ class BaseSampler(object):
         for i in range(n_chains):
             self.chains.append(BaseChain(self.n_pars, par_names=self.par_names))
 
-    def sample_once(self, chain_ix):
+    def sample_once(self, chain_ix, *args, **kwargs):
         '''Do a single sample, on a single chain.
 
         Parameters
         ----------
         chain_ix : int
             Index of the chain to sample.
+        *args, **kwargs : Optional arguments passed to sampler.eval_proposal()
         '''
         chain = self.chains[chain_ix]
         proposal = self.propose(chain)
-        old_ll, new_ll, accept = self.eval_proposal(proposal, chain)
+        old_ll, new_ll, accept = self.eval_proposal(proposal, chain, *args, **kwargs)
         if accept:
             chain.add_sample(proposal, new_ll)
         else:
             chain.reject_sample(old_ll)
 
-    def sample_chain(self, chain_ix, n, verbose=None):
+    def sample_chain(self, chain_ix, n, verbose=None, *args, **kwargs):
         ''''Draw samples on a single chain.
 
         Parameters
@@ -205,7 +206,7 @@ class BaseSampler(object):
         target_iter = chain.iterations + n
         while(chain.iterations < target_iter):
             try:
-                 self.sample_once(chain_ix)
+                 self.sample_once(chain_ix, *args, **kwargs)
                  if self.verbose > 0:
                      if self.verbose == 2 or chain.iterations % 20 == 0:
                          txt = '\r#%i, #jumps = %i, Pars = %s, ll = %.2f' % (
@@ -224,7 +225,8 @@ class BaseSampler(object):
 
     def sample_chains(self, n=5000, parallel=False,
                       save_every=None, filepath='.ezmc_samples_ch%i.csv',
-                      verbose=None, tidy=True, print_every=100):
+                      verbose=None, tidy=True, print_every=100,
+                      *args, **kwargs):
         ''''Draw samples for all chains.
 
         Parameters
@@ -252,7 +254,7 @@ class BaseSampler(object):
         if not parallel:
             for i in range(len(self.chains)):
                 print('\nStarting chain %i' % (i+1))
-                self.sample_chain(i, n, verbose=verbose)
+                self.sample_chain(i, n, verbose=verbose, *args, **kwargs)
         else:
             print('Sampling in parallel')
             print('Note: Progress monitoring not implemented for parallel chains yet.')
@@ -262,8 +264,10 @@ class BaseSampler(object):
             self.verbose = 0
             import scipy
             pool = mp.Pool(self.n_chains)
-            result = [pool.apply_async(utils._parallel_sample, args=(self, i, n, print_every))
-                      for i in range(self.n_chains)]
+            result = [pool.apply_async(utils._parallel_sample,
+                                       args=(self, i, n, print_every),
+                                       kwds=kwargs) for i in
+                      range(self.n_chains)]
             self.chains = [r.get() for r in result]
             self.verbose = old_verbose
 
@@ -314,17 +318,9 @@ class BaseSampler(object):
         self.results.to_csv(filepath)
 
 
-
     def to_arviz(self, burn_in=0, thin=0):
         '''Exports posterior samples as Arviz object for visualisation.'''
+        return utils.to_arviz(self, burn_in, thin)
         import arviz as az
         samples = self.get_results(burn_in=burn_in, thin=thin)
-        nchains = len(set(samples['chain']))
-        nsteps = len(set(samples['iter']))
-        npars = len(self.par_names)
-        par_dict = {}
-        for k in self.par_names:
-            X = samples.pivot_table(values=k, columns='iter', index='chain').values
-            par_dict[k] = X
-        posterior = az.dict_to_dataset(par_dict)
-        return posterior
+        return utils.results_to_arviz(results)

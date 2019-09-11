@@ -87,8 +87,9 @@ class MetropolisSampler(BaseSampler):
             new = stats.norm.rvs(loc=old, scale=self.proposal_sd)
             return new
 
-    def eval_proposal(self, proposal, chain):
-        '''Given a proposal for this chain, evaluate the posterior density ratio
+    def eval_proposal(self, proposal, chain, *args, **kwargs):
+        '''
+        Given a proposal for this chain, evaluate the posterior density ratio
         between the proposal and the current value of the chain,
         and decide whether to accept the proposal.
 
@@ -105,12 +106,12 @@ class MetropolisSampler(BaseSampler):
 
         .. math:: \\alpha = max(exp( log(P(\\theta^*)) - log(P(\\theta))), 1)
         '''
-        new_ll = self.func(proposal)
+        new_ll = self.func(proposal, *args, **kwargs)
         if chain.iterations == 0:
             return np.nan, new_ll, True
         old = chain.values
         if self.noisy:
-            old_ll = self.func(old)
+            old_ll = self.func(old, *args, **kwargs)
         else:
             old_ll = chain.cur_ll
         p_accept = np.exp(new_ll - old_ll) ## Only if we're using Log-likelihood!
