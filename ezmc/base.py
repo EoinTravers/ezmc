@@ -182,11 +182,16 @@ class BaseSampler(object):
         '''
         chain = self.chains[chain_ix]
         proposal = self.propose(chain)
-        old_ll, new_ll, accept = self.eval_proposal(proposal, chain, *args, **kwargs)
-        if accept:
-            chain.add_sample(proposal, new_ll)
-        else:
-            chain.reject_sample(old_ll)
+        try:
+            old_ll, new_ll, accept = self.eval_proposal(proposal, chain, *args, **kwargs)
+            if accept:
+                chain.add_sample(proposal, new_ll)
+            else:
+                chain.reject_sample(old_ll)
+        except ValueError as ex:
+            print('Warning! ValueError', ex)
+            print('Rejecting this sample.')
+            chain.reject_sample(-np.inf)
 
     def sample_chain(self, chain_ix, n, verbose=None, *args, **kwargs):
         ''''Draw samples on a single chain.
@@ -218,9 +223,9 @@ class BaseSampler(object):
             except Exception as ex:
                 raise(ex)
                 # print('\nThe following exception occured:')
+                # print('Rejecting this sample...')
                 # raise ex
                 # print(ex)
-                # print('Retrying this sample...')
         return chain
 
     def sample_chains(self, n=5000, parallel=False,
